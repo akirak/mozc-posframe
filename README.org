@@ -1,0 +1,14 @@
+* Posframe Frontend for Mozc.el
+[[https://travis-ci.org/akirak/mozc-posframe][https://travis-ci.org/akirak/mozc-posframe.svg?branch=master]]
+** Installation
+1. Install =mozc= package.
+2. Install this package and set =mozc-candidate-style= variable to ='posframe=.
+
+#+begin_src emacs-lisp
+  (use-package mozc)
+
+  (use-package mozc-posframe
+    :after mozc
+    :config
+    (setq mozc-candidate-style 'posframe))
+#+end_src
