@@ -7,7 +7,7 @@
 #+begin_src emacs-lisp
   (use-package mozc)
 
-  (use-package mozc-posframe
+  (use-package mozc-cand-posframe
     :after mozc
     :config
     (setq mozc-candidate-style 'posframe))
