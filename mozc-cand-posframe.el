@@ -1,11 +1,9 @@
 ;;; mozc-cand-posframe.el --- Posframe frontend for mozc.el -*- lexical-binding: t -*-
 
-;; Keywords: mule, multilingual, input method, tooltip
-
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.1
 ;; Package-Requires: ((emacs "26.1") (posframe "0.5.0") (mozc "0"))
-;; Keywords: mule, multilingual, input method
+;; Keywords: i18n, tooltip
 ;; URL: https://github.com/akirak/mozc-posframe
 
 ;; This file is not part of GNU Emacs.
