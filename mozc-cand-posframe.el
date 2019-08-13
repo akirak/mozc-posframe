@@ -73,7 +73,7 @@
                  '(posframe (clean-up . mozc-cand-posframe-clean-up)
                             (clear . mozc-cand-posframe-clear)
                             (update . mozc-cand-posframe-update)))
-  (error "posframe won't run on this Emacs session."))
+  (error "Posframe won't run on this Emacs session"))
 
 (defun mozc-cand-posframe-clean-up ()
   "Clean up the current candidate session."
