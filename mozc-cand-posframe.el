@@ -115,12 +115,14 @@ CANDIDATES must be the candidates field in a response protobuf."
                                              (lstr (concat (when shortcut
                                                              (format "%s. " shortcut))
                                                            value))
-                                             (rstr (or desc "")))
+                                             (rstr desc))
                                         (when (eq index focused-index)
                                           (setq focused-line linenum))
                                         (list lstr
                                               rstr
-                                              (string-width (concat lstr sep rstr))))))
+                                              (string-width (if rstr
+                                                                (concat lstr sep rstr)
+                                                              lstr))))))
          (x-pixel-offset (- (car (window-text-pixel-size nil
                                                          (overlay-start mozc-preedit-overlay)
                                                          (overlay-end mozc-preedit-overlay)))))
@@ -133,12 +135,16 @@ CANDIDATES must be the candidates field in a response protobuf."
     (with-current-buffer (get-buffer-create mozc-cand-posframe-buffer)
       (goto-char (point-min))
       (insert (mapconcat (lambda (cand)
-                           (concat (car cand)
-                                   sep
-                                   (make-string (- posframe-width
-                                                   (caddr cand))
-                                                ?\s)
-                                   (cadr cand)))
+                           (let ((lstr (car cand))
+                                 (rstr (cadr cand))
+                                 (width (caddr cand)))
+                             (if rstr
+                                 (concat lstr
+                                         sep
+                                         (make-string (- posframe-width width)
+                                                      ?\s)
+                                         rstr)
+                               lstr)))
                          candidates
                          "\n")
               (if has-stat
