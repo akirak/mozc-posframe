@@ -76,7 +76,7 @@
   (error "Posframe won't run on this Emacs session"))
 
 (defun mozc-cand-posframe-clean-up ()
-  "Clean up the current candidate session."
+  "Clean up the current-index candidate session."
   (mozc-cand-posframe-clear))
 
 (defun mozc-cand-posframe-clear ()
@@ -98,91 +98,97 @@
   "Face for extra information area in the child frame."
   :group 'mozc-posframe)
 
+(cl-defstruct mozc-cand-posframe-candidate lstr rstr width)
+
+(defcustom mozc-cand-posframe-separator " "
+  "Separator string"
+  :type 'string)
+
+(defun mozc-cand-posframe--make-item (candidate)
+  (let* ((value (mozc-protobuf-get candidate 'value))
+         (desc (mozc-protobuf-get candidate 'annotation 'description))
+         (shortcut (mozc-protobuf-get candidate 'annotation 'shortcut))
+         (lstr (concat (when shortcut
+                         (format "%s. " shortcut))
+                       value))
+         (rstr desc))
+    (make-mozc-cand-posframe-candidate
+     :lstr lstr :rstr rstr :width (string-width (if rstr
+                                                    (concat lstr mozc-cand-posframe-separator rstr)
+                                                  lstr)))))
+
 (defun mozc-cand-posframe-update (candidates)
   "Update the candidate window using posframes.
 CANDIDATES must be the candidates field in a response protobuf."
-  (let* ((focused-index (mozc-protobuf-get candidates 'focused-index))
-         (size (mozc-protobuf-get candidates 'size))
-         (sep "  ")
+  (let* ((current-index (mozc-protobuf-get candidates 'focused-index))
+         (total (mozc-protobuf-get candidates 'size))
          (index-visible (mozc-protobuf-get candidates 'footer 'index-visible))
-         focused-line
-         (candidates (cl-loop for candidate being the elements of (mozc-protobuf-get candidates 'candidate)
-                              using (index linenum)
-                              collect (let* ((index (mozc-protobuf-get candidate 'index))
-                                             (value (mozc-protobuf-get candidate 'value))
-                                             (desc (mozc-protobuf-get candidate 'annotation 'description))
-                                             (shortcut (mozc-protobuf-get candidate 'annotation 'shortcut))
-                                             (lstr (concat (when shortcut
-                                                             (format "%s. " shortcut))
-                                                           value))
-                                             (rstr desc))
-                                        (when (eq index focused-index)
-                                          (setq focused-line linenum))
-                                        (list lstr
-                                              rstr
-                                              (string-width (if rstr
-                                                                (concat lstr sep rstr)
-                                                              lstr))))))
+         (source (mozc-protobuf-get candidates 'candidate))
+         candidate
+         (before-current (let (result)
+                           (when current-index
+                             (while (and (setq candidate (pop source))
+                                         (< (mozc-protobuf-get candidate 'index) current-index))
+                               (push (mozc-cand-posframe--make-item candidate) result)))
+                           (nreverse result)))
+         (current (when (and current-index
+                             candidate
+                             (= (mozc-protobuf-get candidate 'index) current-index))
+                    (mozc-cand-posframe--make-item candidate)))
+         (after-current (mapcar #'mozc-cand-posframe--make-item source))
          (x-pixel-offset (- (car (window-text-pixel-size nil
                                                          (overlay-start mozc-preedit-overlay)
                                                          (overlay-end mozc-preedit-overlay)))))
-         (has-stat (and index-visible focused-index size))
-         (posframe-width (apply #'max (mapcar #'caddr candidates)))
+         (posframe-width (apply #'max (mapcar #'mozc-cand-posframe-candidate-width
+                                              (append before-current
+                                                      (when current
+                                                        (list current))
+                                                      after-current))))
+         (modeline (when (and index-visible current-index total
+                              (> total 1))
+                     (s-pad-left posframe-width " "
+                                 (format "%d/%d" (1+ current-index) total))))
          (posframe-height (+ (length candidates)
-                             (if has-stat 1 0)))
-         (abovep (> (+ posframe-height (mozc-posn-y mozc-preedit-posn-origin))
-                    (window-height))))
+                             1
+                             (if modeline 1 0)))
+         ;; (abovep (> (+ posframe-height (mozc-posn-y mozc-preedit-posn-origin))
+         ;;            (window-height)))
+         )
     (with-current-buffer (get-buffer-create mozc-cand-posframe-buffer)
       (goto-char (point-min))
-      (insert (mapconcat (lambda (cand)
-                           (let ((lstr (car cand))
-                                 (rstr (cadr cand))
-                                 (width (caddr cand)))
-                             (if rstr
-                                 (concat lstr
-                                         sep
-                                         (make-string (- posframe-width width)
-                                                      ?\s)
-                                         rstr)
-                               lstr)))
-                         candidates
-                         "\n")
-              (if has-stat
-                  (let ((s (format "%d/%d" (1+ focused-index) size)))
-                    (concat "\n"
-                            (make-string (- posframe-width
-                                            (string-width s))
-                                         ?\s)
-                            s))
-                ""))
-      (delete-region (point) (point-max))
-      (remove-overlays)
-      (when focused-line
-        (goto-char (point-min))
-        (forward-line focused-line)
-        (let ((beg (point))
-              (end (progn
-                     (forward-line)
-                     (1- (point)))))
-          (overlay-put (make-overlay beg end) 'face 'mozc-cand-posframe-focused-face)))
-      (when has-stat
-        (goto-char (point-max))
-        (let ((end (point))
-              (beg (progn
-                     (beginning-of-line)
-                     (point))))
-          (overlay-put (make-overlay beg end) 'face 'mozc-cand-posframe-footer-face))))
+      (cl-labels ((format-candidate (cand)
+                                    (concat (mozc-cand-posframe-candidate-lstr cand)
+                                            (if (mozc-cand-posframe-candidate-rstr cand)
+                                                (concat mozc-cand-posframe-separator
+                                                        (make-string (- posframe-width
+                                                                        (mozc-cand-posframe-candidate-width cand))
+                                                                     ?\s)
+                                                        (mozc-cand-posframe-candidate-rstr cand))
+                                              "")
+                                            "\n"))
+                  (put-face-overlay (begin end face)
+                                    (overlay-put (make-overlay begin end) 'face face)))
+        (when before-current
+          (insert (mapconcat #'format-candidate before-current "")))
+        (put-face-overlay (point-min) (point) 'mozc-cand-posframe-normal-face)
+        (when current
+          (let ((begin (point)))
+            (insert (format-candidate current))
+            (put-face-overlay begin (point) 'mozc-cand-posframe-focused-face)))
+        (when after-current
+          (let ((begin (point)))
+            (insert (mapconcat #'format-candidate after-current ""))
+            (put-face-overlay begin (point) 'mozc-cand-posframe-normal-face))))
+      (delete-region (1- (point)) (point-max))
+      (when modeline
+        (setq-local mode-line-format
+                    (list (propertize modeline 'face 'mozc-cand-posframe-footer-face)))))
     (posframe-show mozc-cand-posframe-buffer
                    :foreground-color (face-foreground 'mozc-cand-posframe-normal-face nil t)
                    :background-color (face-background 'mozc-cand-posframe-normal-face nil t)
-                   :poshandler
-                   (if abovep
-                       'posframe-poshandler-point-bottom-left-corner
-                     'posframe-poshandler-point-top-left-corner)
-                   :x-pixel-offset x-pixel-offset
-                   ;; :y-pixel-offset (frame-char-height)
-                   :width posframe-width
-                   :height posframe-height)))
+                   :poshandler 'posframe-poshandler-point-bottom-left-corner
+                   :respect-mode-line (not (null modeline))
+                   :x-pixel-offset x-pixel-offset)))
 
 (provide 'mozc-cand-posframe)
 ;;; mozc-cand-posframe.el ends here
