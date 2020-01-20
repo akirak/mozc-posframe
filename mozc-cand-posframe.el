@@ -84,17 +84,22 @@
   (posframe-delete mozc-cand-posframe-buffer))
 
 (defface mozc-cand-posframe-normal-face
-  '((t (:inherit popup-face)))
+  '((t (:inherit default
+                 :background "#dcd4be"
+                 :foreground "#222222")))
   "Face for normal candidates and the entire child frame."
   :group 'mozc-posframe)
 
 (defface mozc-cand-posframe-focused-face
-  '((t (:inherit popup-tip-face)))
+  '((t (:inherit mozc-cand-posframe-normal-face
+                 :background "#fff37a"
+                 :foreground "#111111")))
   "Face for selected candidates."
   :group 'mozc-posframe)
 
 (defface mozc-cand-posframe-footer-face
-  '((t (:inherit popup-summary-face)))
+  '((t (:inherit mozc-cand-posframe-normal-face
+                 :foreground "#203152")))
   "Face for extra information area in the child frame."
   :group 'mozc-posframe)
 
