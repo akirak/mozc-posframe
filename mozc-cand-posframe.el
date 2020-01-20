@@ -179,7 +179,7 @@ CANDIDATES must be the candidates field in a response protobuf."
           (let ((begin (point)))
             (insert (mapconcat #'format-candidate after-current ""))
             (put-face-overlay begin (point) 'mozc-cand-posframe-normal-face))))
-      (delete-region (1- (point)) (point-max))
+      (delete-region (point) (point-max))
       (when modeline
         (setq-local mode-line-format
                     (list (propertize modeline 'face 'mozc-cand-posframe-footer-face)))))
