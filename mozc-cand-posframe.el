@@ -2,7 +2,7 @@
 
 ;; Author: Akira Komamura <akira.komamura@gmail.com>
 ;; Version: 0.1
-;; Package-Requires: ((emacs "26.1") (posframe "0.5.0") (mozc "20180101.800"))
+;; Package-Requires: ((emacs "26.1") (posframe "0.5.0") (mozc "20180101.800") (s "1.12"))
 ;; Keywords: i18n, tooltip
 ;; URL: https://github.com/akirak/mozc-posframe
 
@@ -59,6 +59,7 @@
 
 (require 'mozc)
 (require 'posframe)
+(require 's)
 
 (defgroup mozc-posframe nil
   "Posframe frontend for mozc.el."
