@@ -3,7 +3,7 @@
 
 [[https://github.com/akirak/mozc-posframe/workflows/lint/badge.svg?branch=master][https://github.com/akirak/mozc-posframe/workflows/lint/badge.svg?branch=master]]
 
-This package provides [[https://github.com/tumashu/posframe][posframe]] interface for [[https://github.com/google/mozc][mozc.el]], an Emacs input method for Japanese.88
+This package provides [[https://github.com/tumashu/posframe][posframe]] interface for [[https://github.com/google/mozc][mozc.el]], an Emacs input method for Japanese.
 
 ** Installation
 1. Install =mozc= package.
