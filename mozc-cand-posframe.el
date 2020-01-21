@@ -154,13 +154,7 @@ CANDIDATES must be the candidates field in a response protobuf."
          (modeline (when (and index-visible current-index total
                               (> total 1))
                      (s-pad-left posframe-width " "
-                                 (format "%d/%d" (1+ current-index) total))))
-         (posframe-height (+ (length candidates)
-                             1
-                             (if modeline 1 0)))
-         ;; (abovep (> (+ posframe-height (mozc-posn-y mozc-preedit-posn-origin))
-         ;;            (window-height)))
-         )
+                                 (format "%d/%d" (1+ current-index) total)))))
     (with-current-buffer (get-buffer-create mozc-cand-posframe-buffer)
       (goto-char (point-min))
       (cl-labels ((format-candidate (cand)
