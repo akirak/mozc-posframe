@@ -107,10 +107,11 @@
 (cl-defstruct mozc-cand-posframe-candidate lstr rstr width)
 
 (defcustom mozc-cand-posframe-separator " "
-  "Separator string"
+  "Separator between the left column and the right column."
   :type 'string)
 
 (defun mozc-cand-posframe--make-item (candidate)
+  "Make a struct from CANDIDATE."
   (let* ((value (mozc-protobuf-get candidate 'value))
          (desc (mozc-protobuf-get candidate 'annotation 'description))
          (shortcut (mozc-protobuf-get candidate 'annotation 'shortcut))
