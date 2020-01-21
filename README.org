@@ -1,7 +1,7 @@
 * Posframe Frontend for Mozc.el
 [[https://raw.githubusercontent.com/akirak/mozc-posframe/screencast/mozc-cand-posframe.gif][https://raw.githubusercontent.com/akirak/mozc-posframe/screencast/mozc-cand-posframe.gif]]
 
-[[https://travis-ci.org/akirak/mozc-posframe][https://travis-ci.org/akirak/mozc-posframe.svg?branch=master]]
+[[https://github.com/akirak/mozc-posframe/workflows/lint/badge.svg?branch=master][https://github.com/akirak/mozc-posframe/workflows/lint/badge.svg?branch=master]]
 ** Installation
 1. Install =mozc= package.
 2. Install this package and set =mozc-candidate-style= variable to ='posframe=.
