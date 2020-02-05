@@ -143,9 +143,10 @@ CANDIDATES must be the candidates field in a response protobuf."
                              (= (mozc-protobuf-get candidate 'index) current-index))
                     (mozc-cand-posframe--make-item candidate)))
          (after-current (mapcar #'mozc-cand-posframe--make-item source))
-         (x-pixel-offset (- (car (window-text-pixel-size nil
-                                                         (overlay-start mozc-preedit-overlay)
-                                                         (overlay-end mozc-preedit-overlay)))))
+         (x-pixel-offset (+ (- (car (window-text-pixel-size nil
+                                                            (overlay-start mozc-preedit-overlay)
+                                                            (overlay-end mozc-preedit-overlay))))
+                            (line-number-display-width t)))
          (posframe-width (apply #'max (mapcar #'mozc-cand-posframe-candidate-width
                                               (append before-current
                                                       (when current
