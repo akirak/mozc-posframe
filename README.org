@@ -17,3 +17,7 @@ This package provides [[https://github.com/tumashu/posframe][posframe]] interfac
     :config
     (setq mozc-candidate-style 'posframe))
 #+end_src
+** Thanks
+- Masahiro Nakamura (@tsuu32) ([[https://github.com/akirak/mozc-posframe/pull/4][#4]])
+** License
+GPL v3
