@@ -76,6 +76,11 @@
                             (update . mozc-cand-posframe-update)))
   (error "Posframe won't run on this Emacs session"))
 
+(defcustom mozc-cand-posframe-y-pixel-offset 0
+  "Vertical offset for the posframe."
+  :type 'integer
+  :group 'mozc-posframe)
+
 (defun mozc-cand-posframe-clean-up ()
   "Clean up the current-index candidate session."
   (mozc-cand-posframe-clear))
@@ -190,7 +195,8 @@ CANDIDATES must be the candidates field in a response protobuf."
                    :background-color (face-background 'mozc-cand-posframe-normal-face nil t)
                    :poshandler 'posframe-poshandler-point-bottom-left-corner
                    :respect-mode-line (not (null modeline))
-                   :x-pixel-offset x-pixel-offset)))
+                   :x-pixel-offset x-pixel-offset
+                   :y-pixel-offset mozc-cand-posframe-y-pixel-offset)))
 
 (provide 'mozc-cand-posframe)
 ;;; mozc-cand-posframe.el ends here
