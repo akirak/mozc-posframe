@@ -57,6 +57,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'mozc)
 (require 'posframe)
 (require 's)
@@ -90,30 +91,102 @@
   (posframe-delete mozc-cand-posframe-buffer))
 
 (defface mozc-cand-posframe-normal-face
-  '((t (:inherit default
-                 :background "#dcd4be"
-                 :foreground "#222222")))
-  "Face for normal candidates and the entire child frame."
-  :group 'mozc-posframe)
+  '((((class color) (min-colors 88) (background dark)) :background "#191a1b")
+    (((class color) (min-colors 88) (background light)) :background "#f0f0f0")
+    (t :background "gray"))
+  "Face for normal candidates and the entire child frame.")
 
 (defface mozc-cand-posframe-focused-face
-  '((t (:inherit mozc-cand-posframe-normal-face
-                 :background "#fff37a"
-                 :foreground "#111111")))
-  "Face for selected candidates."
-  :group 'mozc-posframe)
+  '((((class color) (min-colors 88) (background dark))
+     :background "#00415e" :foreground "white")
+    (((class color) (min-colors 88) (background light))
+     :background "#c0efff" :foreground "black")
+    (t :background "blue" :foreground "white"))
+  "Face for selected candidates.")
 
 (defface mozc-cand-posframe-footer-face
-  '((t (:inherit mozc-cand-posframe-normal-face
-                 :foreground "#203152")))
-  "Face for extra information area in the child frame."
-  :group 'mozc-posframe)
+  '((((class color) (min-colors 88) (background dark))
+     :foreground "#00415e" :background "#191a1b")
+    (((class color) (min-colors 88) (background light))
+     :foreground "#c0efff" :background "#f0f0f0")
+    (t :background "gray"))
+  "Face for extra information area in the child frame.")
+
+(defface mozc-cand-posframe-annotations-face
+  '((t (:inherit completions-annotations)))
+  "Face for candidate annotations.")
+
+(defface mozc-cand-posframe-border-face
+  '((((class color) (min-colors 88) (background dark)) :background "#323232")
+    (((class color) (min-colors 88) (background light)) :background "#d7d7d7")
+    (t :background "gray"))
+  "Face used for the child frame border.")
 
 (cl-defstruct mozc-cand-posframe-candidate lstr rstr width)
 
-(defcustom mozc-cand-posframe-separator " "
-  "Separator between the left column and the right column."
-  :type 'string)
+(defcustom mozc-cand-posframe-min-width 20
+  "Minimun width of the child frame."
+  :type 'integer
+  :group 'mozc-posframe)
+
+(defcustom mozc-cand-posframe--width-padding 4
+  "Width padding."
+  :type 'integer
+  :group 'mozc-posframe)
+
+(defcustom mozc-cand-posframe-mode-line nil
+  "If non-nil, display mode-line."
+  :type 'boolean
+  :group 'mozc-posframe)
+
+(defcustom mozc-cand-posframe-border-width 1
+  "Border width."
+  :type 'integer
+  :group 'mozc-posframe)
+
+(cl-defun mozc-cand-posframe--frame-width (width min-width &key padding)
+  "Return frame width.
+If WIDTH >= MIN-WIDTH, return WIDTH + PADDING
+IF MIN-WIDTH > WIDTH, return MIN-WIDTH + PADDING"
+  (let ((pad (or padding mozc-cand-posframe--width-padding)))
+    (cond
+     ((>= width min-width) (+ width pad))
+     (t  (+ min-width pad)))))
+
+(cl-defun mozc-cand-posframe-draw (cand &key cand-max-width face)
+  "Format posframe CAND entry.
+
+CAND-MAX-WIDTH: length of the longest candidate
+FACE: candidate entry face"
+  (let* ((posframe-width (mozc-cand-posframe--frame-width cand-max-width
+                                                          mozc-cand-posframe-min-width))
+         (lstr (mozc-cand-posframe-candidate-lstr cand))
+         (rstr (mozc-cand-posframe-candidate-rstr cand))
+         (lstr-width (string-width lstr)))
+    (let ((begin nil))
+      (setq begin (point))
+      (insert " ")
+      (insert lstr)
+      (overlay-put (make-overlay begin (point)) 'face face)
+      (setq begin (point))
+      (insert (s-pad-left (- posframe-width lstr-width)
+                          " "
+                          ""))
+      (overlay-put (make-overlay begin (point-at-eol))
+                   'face `(nil :inherit mozc-cand-posframe-annotations-face
+                               :background ,(face-attribute face :background))))
+    (insert "\n")))
+
+(cl-defun mozc-cand-posframe-draw-info (index total &key cand-max-width)
+  "Format `mozc-cand-posframe` mode-line.
+
+INDEX: current candidate index
+TOTAL: candidates total
+CAND-MAX-WIDTH: length of the longest candidate"
+  (let* ((posframe-width (mozc-cand-posframe--frame-width cand-max-width
+                                                          mozc-cand-posframe-min-width)))
+    (s-pad-right posframe-width " "
+                 (format " %d/%d" index total))))
 
 (defun mozc-cand-posframe--make-item (candidate)
   "Make a struct from CANDIDATE."
@@ -125,9 +198,9 @@
                        value))
          (rstr desc))
     (make-mozc-cand-posframe-candidate
-     :lstr lstr :rstr rstr :width (string-width (if rstr
-                                                    (concat lstr mozc-cand-posframe-separator rstr)
-                                                  lstr)))))
+     :lstr lstr
+     :rstr rstr
+     :width (string-width lstr))))
 
 (defun mozc-cand-posframe-update (candidates)
   "Update the candidate window using posframes.
@@ -152,48 +225,45 @@ CANDIDATES must be the candidates field in a response protobuf."
                                                             (overlay-start mozc-preedit-overlay)
                                                             (overlay-end mozc-preedit-overlay))))
                             (line-number-display-width t)))
-         (posframe-width (apply #'max (mapcar #'mozc-cand-posframe-candidate-width
+         (cand-max-width (apply #'max (mapcar #'mozc-cand-posframe-candidate-width
                                               (append before-current
                                                       (when current
                                                         (list current))
                                                       after-current))))
          (modeline (when (and index-visible current-index total
-                              (> total 1))
-                     (s-pad-left posframe-width " "
-                                 (format "%d/%d" (1+ current-index) total)))))
+                              (> total 1) mozc-cand-posframe-mode-line)
+                     (mozc-cand-posframe-mode-line (1+ current-index) total :cand-max-width cand-max-width))))
     (with-current-buffer (get-buffer-create mozc-cand-posframe-buffer)
       (goto-char (point-min))
-      (cl-labels ((format-candidate (cand)
-                                    (concat (mozc-cand-posframe-candidate-lstr cand)
-                                            (if (mozc-cand-posframe-candidate-rstr cand)
-                                                (concat mozc-cand-posframe-separator
-                                                        (make-string (- posframe-width
-                                                                        (mozc-cand-posframe-candidate-width cand))
-                                                                     ?\s)
-                                                        (mozc-cand-posframe-candidate-rstr cand))
-                                              "")
-                                            "\n"))
-                  (put-face-overlay (begin end face)
-                                    (overlay-put (make-overlay begin end) 'face face)))
+      (cl-labels ((draw-default (cand)
+                    (mozc-cand-posframe-draw cand
+                                             :cand-max-width cand-max-width
+                                             :face 'mozc-cand-posframe-normal-face))
+                  (draw-focused (cand)
+                    (mozc-cand-posframe-draw cand
+                                             :cand-max-width cand-max-width
+                                             :face 'mozc-cand-posframe-focused-face)))
         (when before-current
-          (insert (mapconcat #'format-candidate before-current "")))
-        (put-face-overlay (point-min) (point) 'mozc-cand-posframe-normal-face)
+          (cl-map 'list #'draw-default before-current))
         (when current
-          (let ((begin (point)))
-            (insert (format-candidate current))
-            (put-face-overlay begin (point) 'mozc-cand-posframe-focused-face)))
+          (draw-focused current))
         (when after-current
-          (let ((begin (point)))
-            (insert (mapconcat #'format-candidate after-current ""))
-            (put-face-overlay begin (point) 'mozc-cand-posframe-normal-face))))
+          (cl-map 'list #'draw-default after-current)))
       (delete-region (point) (point-max))
       (when modeline
         (setq-local mode-line-format
-                    (list (propertize modeline 'face 'mozc-cand-posframe-footer-face)))))
+                    (list (propertize modeline 'face `(:inherit mozc-cand-posframe-footer-face
+                                                                :box nil))))))
     (posframe-show mozc-cand-posframe-buffer
                    :foreground-color (face-foreground 'mozc-cand-posframe-normal-face nil t)
                    :background-color (face-background 'mozc-cand-posframe-normal-face nil t)
                    :poshandler 'posframe-poshandler-point-bottom-left-corner
+                   :lines-truncate t
+                   :border-width mozc-cand-posframe-border-width
+                   :border-color (face-background 'mozc-cand-posframe-border-face nil t)
+                   :max-width (mozc-cand-posframe--frame-width cand-max-width
+                                                               mozc-cand-posframe-min-width
+                                                               :padding (- mozc-cand-posframe--width-padding 2))
                    :respect-mode-line (not (null modeline))
                    :x-pixel-offset x-pixel-offset
                    :y-pixel-offset mozc-cand-posframe-y-pixel-offset)))
