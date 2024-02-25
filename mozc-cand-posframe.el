@@ -70,12 +70,19 @@
 
 (defconst mozc-cand-posframe-buffer "*mozc cand posframe*")
 
-(if (posframe-workable-p)
-    (add-to-list 'mozc-candidate-dispatch-table
-                 '(posframe (clean-up . mozc-cand-posframe-clean-up)
-                            (clear . mozc-cand-posframe-clear)
-                            (update . mozc-cand-posframe-update)))
-  (error "Posframe won't run on this Emacs session"))
+(defun mozc-cand-posframe-init (&optional frame)
+  "Initialize `mozc-cand-posframe` using FRAME if available."
+  (with-selected-frame frame
+    (if (posframe-workable-p)
+        (add-to-list 'mozc-candidate-dispatch-table
+                     '(posframe (clean-up . mozc-cand-posframe-clean-up)
+                                (clear . mozc-cand-posframe-clear)
+                                (update . mozc-cand-posframe-update)))
+      (error "Posframe won't run on this Emacs session"))))
+
+(if (daemonp)
+    (add-hook 'after-make-frame-functions #'mozc-cand-posframe-init)
+  (mozc-can-posframe-init))
 
 (defcustom mozc-cand-posframe-y-pixel-offset 0
   "Vertical offset for the posframe."
